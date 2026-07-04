@@ -8,16 +8,16 @@ const ROOM_BOUNDS = {
   work2: { x: 620, w: 280 },
 };
 
-// Relative device anchor points inside each room's local (0-280, 0-300) box.
+// Relative device anchor points inside each room's local (0-280, 0-360) box.
 const ANCHORS = {
   fan: [
-    { x: 70, y: 70 },
-    { x: 200, y: 70 },
+    { x: 70, y: 300 },
+    { x: 200, y: 300 },
   ],
   light: [
-    { x: 55, y: 40 },
-    { x: 140, y: 40 },
-    { x: 225, y: 40 },
+    { x: 55, y: 100 },
+    { x: 140, y: 100 },
+    { x: 225, y: 100 },
   ],
 };
 
@@ -76,7 +76,7 @@ export default function OfficeLayout({ devicesByRoom }) {
           x="10"
           y="10"
           width="880"
-          height="380"
+          height="360"
           rx="14"
           className="office-shell"
         />
@@ -91,7 +91,7 @@ export default function OfficeLayout({ devicesByRoom }) {
             <g key={room.id} transform={`translate(${bounds.x}, 20)`}>
               <rect
                 width={bounds.w}
-                height="360"
+                height="340"
                 rx="10"
                 className="room-rect"
               />
@@ -103,47 +103,6 @@ export default function OfficeLayout({ devicesByRoom }) {
               >
                 {room.name.toUpperCase()}
               </text>
-
-              {/* Decorative furniture per room type — purely visual context */}
-              {room.id === "drawing" ? (
-                <>
-                  <rect
-                    x="30"
-                    y="230"
-                    width="90"
-                    height="45"
-                    rx="8"
-                    className="furniture-sofa"
-                  />
-                  <rect
-                    x="140"
-                    y="240"
-                    width="60"
-                    height="30"
-                    rx="4"
-                    className="furniture-table"
-                  />
-                </>
-              ) : (
-                <>
-                  <rect
-                    x="40"
-                    y="200"
-                    width="60"
-                    height="34"
-                    rx="4"
-                    className="furniture-desk"
-                  />
-                  <rect
-                    x="180"
-                    y="200"
-                    width="60"
-                    height="34"
-                    rx="4"
-                    className="furniture-desk"
-                  />
-                </>
-              )}
 
               {fans.map((device, i) => (
                 <g
@@ -165,13 +124,6 @@ export default function OfficeLayout({ devicesByRoom }) {
           );
         })}
 
-        {/* Entry */}
-        <g transform="translate(450, 400)">
-          <path d="M-30,0 L30,0 L0,-26 Z" className="entry-arrow" />
-          <text y="34" textAnchor="middle" className="entry-label">
-            ENTRY
-          </text>
-        </g>
       </svg>
     </div>
   );

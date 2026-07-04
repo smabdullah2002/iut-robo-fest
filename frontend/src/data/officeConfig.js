@@ -1,5 +1,5 @@
 // Fixed office layout, per the problem statement.
-// 3 rooms, each with 2 fans + 3 lights = 6 devices/room, 18 devices total.
+// 3 rooms, each with 2 fans + 3 lights = 5 devices/room, 15 devices total.
 
 export const DEVICE_RATINGS_W = {
   fan: 60, // realistic ceiling fan draw
@@ -30,7 +30,7 @@ export const ROOMS = [
   },
 ];
 
-// Builds the canonical 18-device list. Each device carries a stable id so
+// Builds the canonical 15-device list. Each device carries a stable id so
 // the simulator (or, later, a live backend) can be swapped in without any
 // component needing to change.
 export function buildDeviceRoster() {

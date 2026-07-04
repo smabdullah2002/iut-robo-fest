@@ -64,6 +64,47 @@ def format_usage(payload: dict) -> str:
     return f"Total power right now: {total_watts}W. Today's estimated usage: {total_kwh} kWh."
 
 
+def format_room_details(room_label: str, devices: list[dict]) -> str:
+    if not devices:
+        return f"{room_label}: no devices found."
+
+    lines = [f"{room_label}:"]
+    on_count = 0
+
+    for device in devices:
+        state = "ON" if device.get("is_on") else "OFF"
+        watts = device.get("current_power_w", 0)
+        if device.get("is_on"):
+            on_count += 1
+        lines.append(f"- {device.get('label', 'Device')} ({device.get('type', 'device')}): {state} · {watts}W")
+
+    lines.append(f"Active devices: {on_count}/{len(devices)}")
+    return "\n".join(lines)
+
+
+def format_room_total_watts(room_label: str, devices: list[dict]) -> str:
+    total_watts = sum(int(device.get("current_power_w", 0) or 0) for device in devices)
+    fans = []
+    lights = []
+
+    for device in devices:
+        name = str(device.get("label", "Device"))
+        state = "ON" if device.get("is_on") else "OFF"
+        device_type = str(device.get("type", "")).lower()
+
+        if device_type == "fan":
+            fans.append(f"{name} {state}")
+        elif device_type == "light":
+            lights.append(f"{name} {state}")
+
+    parts = [f"{room_label}: {total_watts}W"]
+    if fans:
+        parts.append(f"Fans: {', '.join(fans)}")
+    if lights:
+        parts.append(f"Lights: {', '.join(lights)}")
+    return "\n".join(parts)
+
+
 async def groq_humanize(prompt: str, facts: str) -> str:
     if not settings.groq_api_key:
         return facts
@@ -121,14 +162,7 @@ async def room_command(ctx: commands.Context, room_name: str) -> None:
         payload = await api.fetch_room(normalized_room)
         room_devices = extract_devices(payload, "devices")
         room_label = friendly_room_name(normalized_room)
-        facts = summarize_devices(room_devices).split("; ")
-        room_summary = next((summary for summary in facts if summary.startswith(room_label + ":")), f"{room_label}: no data")
-        await ctx.reply(
-            await groq_humanize(
-                f"Rewrite this room status for {room_label} into a friendly Discord reply.",
-                room_summary,
-            )
-        )
+        await ctx.reply(format_room_total_watts(room_label, room_devices))
     except httpx.HTTPError:
         await ctx.reply("I couldn’t reach the office backend just now.")
 

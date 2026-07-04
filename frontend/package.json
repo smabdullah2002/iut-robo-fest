@@ -1,9 +1,12 @@
 {
   "name": "office-pulse-dashboard",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "description": "Office Pulse — real-time office device & power monitoring dashboard (Techathon Nationals hackathon, frontend module).",
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "vite.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

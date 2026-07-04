@@ -40,7 +40,7 @@ export default function PowerMeter({ power, energyKwh }) {
       <div className="power-footer">
         <span>Estimated usage today</span>
         <strong>
-          <AnimatedNumber value={energyKwh} decimals={2} suffix=" kWh" />
+          <AnimatedNumber value={energyKwh} decimals={4} suffix=" kWh" />
         </strong>
       </div>
     </section>

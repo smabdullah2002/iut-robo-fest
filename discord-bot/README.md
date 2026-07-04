@@ -19,7 +19,7 @@ python -m app.bot
 ## Commands
 
 - `!status` shows the office-wide summary.
-- `!room drawing|work1|work2` shows a single room summary.
+- `!room drawing|work1|work2` shows the room's total wattage plus which fans and lights are ON/OFF.
 - `!usage` shows current power and estimated daily usage.
 
 ## Backend contract
@@ -30,3 +30,6 @@ The bot expects these endpoints from your existing API:
 - `GET /rooms/{room_name}`
 - `GET /usage`
 - `GET /alerts`
+
+The bot uses the backend as the source of truth for live room and usage data,
+so commands reflect the current office state at the time they are called.

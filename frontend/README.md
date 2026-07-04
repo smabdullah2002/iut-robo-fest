@@ -30,14 +30,19 @@ Copy `.env.example` to `.env` (already done for you) and adjust if needed:
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `VITE_DATA_SOURCE` | `simulation` (self-contained, works today) or `live` (fetches from the team's shared backend) | `simulation` |
-| `VITE_API_BASE_URL` | Base URL of the backend, only used when `VITE_DATA_SOURCE=live` | `http://localhost:4000/api` |
+| `VITE_DATA_SOURCE` | `live` (fetches from the team's local backend) or `simulation` (browser-only fallback) | `live` |
+| `VITE_API_BASE_URL` | Base URL of the backend, only used when `VITE_DATA_SOURCE=live` | `http://127.0.0.1:8000` |
 | `VITE_POLL_INTERVAL_MS` | Poll frequency in live mode | `3000` |
 | `VITE_OFFICE_HOURS_START` / `VITE_OFFICE_HOURS_END` | Office hours used by the alerts logic | `9` / `17` |
 | `VITE_CONTINUOUS_ON_ALERT_HOURS` | Threshold for the "room on too long" alert | `2` |
 
-No keys/secrets are needed in either mode — `live` mode just expects your
-teammate's backend to be reachable, unauthenticated, at `VITE_API_BASE_URL`.
+No keys/secrets are needed in either mode — `live` mode just expects the
+backend to be reachable, unauthenticated, at `VITE_API_BASE_URL`.
+
+In live mode the dashboard updates from the backend's `/devices`, `/usage`,
+and `/alerts` endpoints, and it also listens to the office websocket so the UI
+can refresh immediately when Discord or another client triggers a backend
+change.
 
 ## 3. Why "simulation mode" exists (and how to swap to the real backend)
 
@@ -68,8 +73,8 @@ source:
 - In `simulation` mode it runs `src/data/simulator.js` entirely in the browser —
   useful for building/demoing the frontend before the backend exists, and as a
   fallback if the backend is down during judging.
-- In `live` mode it polls `GET {VITE_API_BASE_URL}/devices` on an interval and
-  expects `{ devices: [...], serverTime: <epoch ms> }` in the same shape.
+- In `live` mode it polls `GET {VITE_API_BASE_URL}/devices`, `/usage`, and
+  `/alerts` on an interval and expects the backend's JSON shapes.
 
 No component (`RoomPanel`, `OfficeLayout`, `PowerMeter`, `AlertsPanel`, …) knows
 or cares which mode is active — swap the env var and everything keeps working.
@@ -81,7 +86,8 @@ satisfied on the frontend side.
 - **Live Device Status Panel** — `RoomPanel.jsx`, one card per room, all 18
   devices, live on/off state, no page refresh (interval-driven state).
 - **Live Power Consumption Meter** — `PowerMeter.jsx`: total wattage + per-room
-  breakdown, animated bars and count-up numbers.
+  breakdown, animated bars and count-up numbers. The daily kWh display follows
+  the backend usage endpoint in live mode.
 - **Active Alerts Panel** — `AlertsPanel.jsx` + `utils/alerts.js`: flags devices
   left on after office hours, and rooms where every device has been
   continuously on beyond the configured threshold. Each alert is timestamped.

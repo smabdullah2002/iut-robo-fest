@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createInitialDevices, tickSimulation } from "../data/simulator";
 import { computePowerSnapshot } from "../utils/power";
 import { deriveAlerts } from "../utils/alerts";
+import { ROOMS } from "../data/officeConfig.js";
 
-const DATA_SOURCE = import.meta.env.VITE_DATA_SOURCE || "simulation";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const DATA_SOURCE = import.meta.env.VITE_DATA_SOURCE || "live";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const POLL_INTERVAL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 3000;
 const OFFICE_HOURS_START = Number(import.meta.env.VITE_OFFICE_HOURS_START) || 9;
 const OFFICE_HOURS_END = Number(import.meta.env.VITE_OFFICE_HOURS_END) || 17;
@@ -39,12 +40,46 @@ const SPEED_OPTIONS = [
 function normalizeDevice(d) {
   return {
     id: d.id,
-    roomId: d.room,
+    roomId: d.roomId ?? d.room,
     type: d.type,
     label: d.label,
-    ratedWatts: d.rated_power_w,
-    status: d.is_on,
-    lastChangedAt: new Date(d.last_changed).getTime(),
+    ratedWatts: d.ratedWatts ?? d.rated_power_w,
+    status: d.status ?? d.is_on,
+    lastChangedAt: new Date(d.lastChangedAt ?? d.last_changed).getTime(),
+  };
+}
+
+function normalizeUsage(payload, fallbackDevices) {
+  if (payload && typeof payload === "object") {
+    const perRoom = Object.fromEntries(ROOMS.map((room) => [room.id, 0]));
+    if (payload.per_room) {
+      ROOMS.forEach((room) => {
+        perRoom[room.id] = payload.per_room[room.id]?.watts_now ?? 0;
+      });
+    }
+
+    return {
+      totalWatts: payload.total_watts_now ?? 0,
+      totalKwh: payload.total_kwh_today ?? 0,
+      perRoom,
+    };
+  }
+
+  const fallback = computePowerSnapshot(fallbackDevices);
+  return {
+    totalWatts: fallback.totalWatts,
+    totalKwh: 0,
+    perRoom: fallback.perRoom,
+  };
+}
+
+function normalizeAlert(alert) {
+  return {
+    id: alert.id,
+    roomId: alert.room,
+    severity: alert.type === "continuous_on" ? "critical" : "warning",
+    timestamp: new Date(alert.triggered_at).getTime(),
+    message: alert.message,
   };
 }
 
@@ -57,6 +92,13 @@ export function useOfficeData() {
   );
   const energyWhRef = useRef(0);
   const lastTickWallClock = useRef(Date.now());
+  const [liveUsage, setLiveUsage] = useState(() => ({
+    totalWatts: computePowerSnapshot(devices).totalWatts,
+    totalKwh: 0,
+    perRoom: computePowerSnapshot(devices).perRoom,
+  }));
+  const [liveAlerts, setLiveAlerts] = useState([]);
+  const websocketRef = useRef(null);
 
   // ---- LIVE MODE: poll the shared backend instead of simulating locally ----
   useEffect(() => {
@@ -65,12 +107,35 @@ export function useOfficeData() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/devices`);
-        if (!res.ok) throw new Error(`Backend responded ${res.status}`);
-        const payload = await res.json();
+        const [devicesRes, usageRes, alertsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/devices`),
+          fetch(`${API_BASE_URL}/usage`),
+          fetch(`${API_BASE_URL}/alerts`),
+        ]);
+
+        if (!devicesRes.ok) throw new Error(`Backend responded ${devicesRes.status}`);
+        if (!usageRes.ok) throw new Error(`Backend responded ${usageRes.status}`);
+        if (!alertsRes.ok) throw new Error(`Backend responded ${alertsRes.status}`);
+
+        const [devicesPayload, usagePayload, alertsPayload] = await Promise.all([
+          devicesRes.json(),
+          usageRes.json(),
+          alertsRes.json(),
+        ]);
         if (cancelled) return;
-        setDevices(payload.devices.map(normalizeDevice));
-        setSimulatedNow(payload.serverTime ?? Date.now());
+        const nextDevices = Array.isArray(devicesPayload)
+          ? devicesPayload
+          : devicesPayload.devices ?? [];
+        setDevices(nextDevices.map(normalizeDevice));
+        const serverTime =
+          (Array.isArray(devicesPayload) ? undefined : devicesPayload.serverTime) ??
+          Date.now();
+        setSimulatedNow(serverTime);
+
+        const normalizedUsage = normalizeUsage(usagePayload, nextDevices.map(normalizeDevice));
+        setLiveUsage(normalizedUsage);
+
+        setLiveAlerts((Array.isArray(alertsPayload) ? alertsPayload : []).map(normalizeAlert));
         setConnection("live");
       } catch (err) {
         if (!cancelled) setConnection("offline");
@@ -84,6 +149,50 @@ export function useOfficeData() {
     return () => {
       cancelled = true;
       clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (DATA_SOURCE !== "live") return undefined;
+
+    const apiUrl = new URL(API_BASE_URL);
+    const wsProtocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+    const websocket = new WebSocket(`${wsProtocol}//${apiUrl.host}/ws/devices`);
+    websocketRef.current = websocket;
+
+    websocket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type !== "state_update") return;
+
+        const nextDevices = Array.isArray(message.devices) ? message.devices : [];
+        if (nextDevices.length > 0) {
+          setDevices(nextDevices.map(normalizeDevice));
+        }
+
+        if (message.usage) {
+          setLiveUsage(normalizeUsage(message.usage, nextDevices.map(normalizeDevice)));
+        }
+
+        if (Array.isArray(message.alerts)) {
+          setLiveAlerts(message.alerts.map(normalizeAlert));
+        }
+
+        setSimulatedNow(Date.now());
+        setConnection("live");
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[office-pulse] websocket parse failed:", err);
+      }
+    };
+
+    websocket.onerror = () => {
+      setConnection("offline");
+    };
+
+    return () => {
+      websocket.close();
+      websocketRef.current = null;
     };
   }, []);
 
@@ -146,13 +255,15 @@ export function useOfficeData() {
   }, []);
 
   // ---- Derived data (recomputed whenever devices/time change) ----
-  const power = useMemo(() => computePowerSnapshot(devices), [devices]);
+  const simulatedPower = useMemo(() => computePowerSnapshot(devices), [devices]);
 
   // Accumulate energy (Wh) so the "today's estimated usage" figure is real,
   // not decorative — integrates instantaneous watts over simulated time.
   const lastEnergyTick = useRef(simulatedNow);
   const [energyWh, setEnergyWh] = useState(0);
   useEffect(() => {
+    if (DATA_SOURCE === "live") return undefined;
+
     const deltaHours = (simulatedNow - lastEnergyTick.current) / 3_600_000;
     lastEnergyTick.current = simulatedNow;
     if (deltaHours <= 0 || deltaHours > 1) return; // guard against resets/huge jumps
@@ -173,6 +284,9 @@ export function useOfficeData() {
     [devices, simulatedNow]
   );
 
+  const power = DATA_SOURCE === "live" ? liveUsage : simulatedPower;
+  const activeAlerts = DATA_SOURCE === "live" ? liveAlerts : alerts;
+
   const resetEnergyCounter = useCallback(() => {
     energyWhRef.current = 0;
     setEnergyWh(0);
@@ -182,8 +296,8 @@ export function useOfficeData() {
     devices,
     simulatedNow,
     power,
-    alerts,
-    energyKwh: energyWh / 1000,
+    alerts: activeAlerts,
+    energyKwh: DATA_SOURCE === "live" ? liveUsage.totalKwh : energyWh / 1000,
     connection,
     dataSource: DATA_SOURCE,
     speed,

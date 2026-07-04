@@ -13,7 +13,6 @@ export default function RoomPanel({
   room,
   devices,
   simulatedNow,
-  onToggleDevice,
 }) {
   const onCount = devices.filter((d) => d.status).length;
   const roomWatts = devices.reduce((sum, d) => sum + instantaneousDraw(d), 0);
@@ -49,17 +48,6 @@ export default function RoomPanel({
             <span className="device-changed">
               {timeAgo(device.lastChangedAt, simulatedNow)}
             </span>
-            <button
-              type="button"
-              className={`device-switch ${device.status ? "is-on" : "is-off"}`}
-              aria-pressed={device.status}
-              aria-label={`${device.status ? "Turn off" : "Turn on"} ${device.label}`}
-              onClick={() => onToggleDevice(device.id)}
-            >
-              <span className="device-switch-track" aria-hidden="true">
-                <span className="device-switch-thumb" />
-              </span>
-            </button>
           </li>
         ))}
       </ul>

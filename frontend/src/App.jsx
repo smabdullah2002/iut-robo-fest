@@ -19,7 +19,6 @@ export default function App() {
     connection,
     dataSource,
     officeHours,
-    toggleDevice,
   } = useOfficeData();
 
   const devicesByRoom = useMemo(() => {
@@ -63,7 +62,6 @@ export default function App() {
                 room={room}
                 devices={devicesByRoom[room.id]}
                 simulatedNow={simulatedNow}
-                onToggleDevice={toggleDevice}
               />
             ))}
           </div>

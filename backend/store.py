@@ -5,6 +5,7 @@ from models.alert import Alert
 
 devices: list[Device] = []
 alerts: list[Alert] = []
+last_energy_update_at: datetime | None = None
 
 
 def _device_id(room: Room, dtype: DeviceType, num: int) -> str:
@@ -12,15 +13,15 @@ def _device_id(room: Room, dtype: DeviceType, num: int) -> str:
 
 
 def _device_label(dtype: DeviceType, room: Room, num: int) -> str:
-    room_labels = {Room.drawing: "Drawing Room", Room.work1: "Work Room 1", Room.work2: "Work Room 2"}
     type_labels = {DeviceType.fan: "Fan", DeviceType.light: "Light"}
-    return f"{type_labels[dtype]} {num} ({room_labels[room]})"
+    return f"{type_labels[dtype]} {num}"
 
 
 def initialize_devices() -> list[Device]:
-    global devices
+    global devices, last_energy_update_at
     now = datetime.now()
     devices.clear()
+    last_energy_update_at = now
 
     for room in Room:
         for i in range(1, 3):
@@ -47,6 +48,24 @@ def initialize_devices() -> list[Device]:
     return devices
 
 
+def accumulate_energy_usage(now: datetime | None = None) -> None:
+    global last_energy_update_at
+    current_time = now or datetime.now()
+    if last_energy_update_at is None:
+        last_energy_update_at = current_time
+        return
+
+    elapsed_hours = (current_time - last_energy_update_at).total_seconds() / 3600
+    if elapsed_hours <= 0:
+        return
+
+    for device in devices:
+        if device.is_on:
+            device.total_energy_kwh_today += device.current_power_w * elapsed_hours / 1000
+
+    last_energy_update_at = current_time
+
+
 def get_device(device_id: str) -> Device | None:
     return next((d for d in devices if d.id == device_id), None)
 
@@ -60,6 +79,7 @@ def toggle_device(device_id: str) -> Device | None:
     if device is None:
         return None
 
+    accumulate_energy_usage()
     device.is_on = not device.is_on
     device.current_power_w = device.rated_power_w if device.is_on else 0
     device.last_changed = datetime.now()
