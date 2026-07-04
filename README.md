@@ -108,15 +108,6 @@ npm run build
 npm run lint
 ```
 
-## Help and documentation
-
-If you need more detail, start with these files:
-
-- [Architecture notes](markdowns/ARCHITECTURE.md)
-- [Problem statement](markdowns/PROBLEM_STATEMENT.md)
-- [Frontend guide](frontend/README.md)
-- [Discord bot guide](discord-bot/README.md)
-
 The frontend and bot READMEs document their own environment variables, modes, and run commands in more detail.
 
 ## Maintainers and contributions
@@ -129,7 +120,7 @@ If you want to contribute:
 - update the relevant service README when behavior changes
 - open a pull request with a short summary of what changed and how you verified it
 
-For design and architecture context, review the files in `markdowns/` before making larger changes.
+
 
 ## License
 
