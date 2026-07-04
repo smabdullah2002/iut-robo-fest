@@ -1,0 +1,78 @@
+:root {
+  /* --- Palette: "clean control room, daylight" --- amber = live/energy, teal = data/on-state */
+  --bg-void: #f6f7f9;
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #fbfbfd;
+  --bg-inset: #eef0f4;
+
+  --border-hair: #e2e5ea;
+  --border-soft: #ebedf1;
+
+  --text-primary: #1a1f29;
+  --text-secondary: #5b6472;
+  --text-tertiary: #8b93a3;
+
+  --amber: #f5a623;
+  --amber-dim: #c9791b;
+  --amber-glow: rgba(245, 166, 35, 0.2);
+
+  --cyan: #159e93;
+  --cyan-dim: #7fd6cc;
+
+  --red: #e0393b;
+  --red-dim: rgba(224, 57, 59, 0.12);
+
+  --green: #2f9e5b;
+
+  --off-grey: #d7dbe2;
+
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --shadow-lift: 0 20px 40px -24px rgba(15, 23, 42, 0.16);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--amber-glow);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
