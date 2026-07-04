@@ -23,27 +23,12 @@ Built for **Techathon Nationals & Rover Summit — Preliminary Round**.
 
 ## Architecture
 
-```
-┌─────────────────────┐
-│  Device Simulator    │
-│  (background task)   │
-└──────────┬──────────┘
-           │ updates
-           ▼
-┌─────────────────────┐
-│  Backend (FastAPI)   │
-│  - In-memory store   │
-│  - Energy accumulator│
-│  - Alert engine      │
-│  - REST + WebSocket  │
-└──────┬──────────┬────┘
-       │          │
-  WS   │          │  REST
-       ▼          ▼
-┌──────────┐  ┌──────────┐
-│Dashboard │  │Discord Bot│
-│(Next.js) │  │(discord.py)│
-└──────────┘  └──────────┘
+```mermaid
+flowchart TD
+    SIM[Device Simulator\nbackground task] -->|updates| BE[Backend FastAPI\nIn-memory store\nEnergy tracking\nAlert engine\nREST + WebSocket]
+    BE -->|WS| DASH[Dashboard Client\nexternal]
+    BE -->|REST| BOT[Discord Bot Service\ndiscord.py + httpx]
+    BOT -. optional .-> GROQ[Groq API\nLLM rewrite]
 ```
 
 Both clients read from the **same backend** — neither holds its own copy of state.
@@ -57,20 +42,67 @@ Both clients read from the **same backend** — neither holds its own copy of st
 - Python 3.11+
 - pip
 
-### Install
+## Backend Setup
+
+### Install Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### Run
+### Run Backend
 
 ```bash
+cd backend
 python -m uvicorn main:app --reload
 ```
 
-The server starts at `http://127.0.0.1:8000`. The simulator begins running automatically — devices toggle every 5 seconds.
+The backend starts at `http://127.0.0.1:8000`. The simulator runs automatically and updates device states every 5 seconds.
+
+## Discord Bot Setup
+
+Create a Discord application/bot and get a bot token from the Discord Developer Portal.
+
+### Install Discord Bot
+
+```bash
+cd discord-bot
+pip install -r requirements.txt
+```
+
+### Configure Discord Bot
+
+Create `discord-bot/.env` with:
+
+```env
+DISCORD_BOT_TOKEN=your_discord_bot_token
+BACKEND_BASE_URL=http://127.0.0.1:8000
+ALERT_POLL_SECONDS=30
+GROQ_API_KEY=optional_groq_api_key
+```
+
+### Run Discord Bot
+
+```bash
+cd discord-bot
+python -m app.bot
+```
+
+The bot queries the same backend API used by the dashboard.
+
+### Discord Bot Commands
+
+- `!status` shows an office-wide status summary
+- `!room drawing|work1|work2` shows room-specific status
+- `!usage` shows current total power and today's estimated usage
+
+The bot expects these backend endpoints:
+
+- `GET /devices`
+- `GET /rooms/{room_name}`
+- `GET /usage`
+- `GET /alerts`
 
 ---
 
@@ -179,7 +211,8 @@ Fans consume 60W, lights consume 15W. `current_power_w` equals rated power when 
 
 ```
 ├── backend/
-│   ├── main.py              # FastAPI app, lifespan, CORS, WebSocket endpoint
+│   ├── .env.example          # Example backend environment variables
+│   ├── main.py               # FastAPI app, lifespan, CORS, WebSocket endpoint
 │   ├── config.py             # Settings from environment variables
 │   ├── store.py              # In-memory store (15 devices + alerts)
 │   ├── requirements.txt
@@ -197,7 +230,15 @@ Fans consume 60W, lights consume 15W. `current_power_w` equals rated power when 
 │   ├── ARCHITECTURE.md       # System architecture documentation
 │   ├── PROBLEM_STATEMENT.md  # Original competition problem statement
 │   └── project_architecture.md
-├── diagrams/                 # System diagram + circuit schematic
+├── Diagrams/                 # System diagram + circuit schematic
+├── discord-bot/
+│   ├── .env.example          # Example bot environment variables
+│   ├── app/
+│   │   ├── bot.py            # Discord commands and message formatting
+│   │   ├── bot_client.py     # Async HTTP client for backend endpoints
+│   │   └── config.py         # Bot settings from environment variables
+│   ├── requirements.txt
+│   └── README.md
 └── README.md
 ```
 

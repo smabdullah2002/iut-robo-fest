@@ -1,0 +1,4 @@
+httpx
+discord.py
+pydantic-settings
+python-dotenv
