@@ -35,6 +35,22 @@ markdowns/     Architecture and problem statement notes
 Diagrams/      Supporting visuals and system diagrams
 ```
 
+## System Design
+
+The following diagram illustrates the overall architecture of **Office Pulse**, showing how the React dashboard, FastAPI backend, Discord bot, and simulator communicate to provide real-time office monitoring.
+
+<p align="center">
+  <img src="./Diagrams/System_Diagram.png" alt="Office Pulse System Design" width="900">
+</p>
+
+## Circuit Diagram
+
+The following circuit diagram represents the hardware setup used for the Office Pulse prototype, including the controller and connected devices.
+
+<p align="center">
+  <img src="./Diagrams/circuit_diagram.png" alt="Office Pulse Circuit Diagram" width="900">
+</p>
+
 ## How to get started
 
 ### 1. Prerequisites
@@ -72,7 +88,11 @@ npm install
 npm run dev
 ```
 
-By default the dashboard uses the live backend at `http://127.0.0.1:8000`. If you want to run it in browser-only simulation mode, copy `frontend/.env.example` to `.env` and change `VITE_DATA_SOURCE=simulation`.
+By default the dashboard uses the live backend at `http://127.0.0.1:8000`. If you want to run it in browser-only simulation mode, copy `frontend/.env.example` to `.env` and change:
+
+```env
+VITE_DATA_SOURCE=simulation
+```
 
 ### 4. Start the Discord bot
 
@@ -110,18 +130,16 @@ npm run lint
 
 The frontend and bot READMEs document their own environment variables, modes, and run commands in more detail.
 
-## Maintainers and contributions
+## Maintainers and Contributions
 
-This project is maintained by the hackathon team working on Office Pulse.
+This project is maintained by the hackathon team working on **Office Pulse**.
 
-If you want to contribute:
+If you'd like to contribute:
 
-- keep changes aligned with the current backend-first architecture
-- update the relevant service README when behavior changes
-- open a pull request with a short summary of what changed and how you verified it
-
-
+- Keep changes aligned with the current backend-first architecture.
+- Update the relevant service README whenever behavior changes.
+- Open a pull request with a short summary of what changed and how you verified it.
 
 ## License
 
-See [LICENSE](LICENSE).
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
